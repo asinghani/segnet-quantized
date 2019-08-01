@@ -2,12 +2,11 @@ import numpy as np
 import os, sys
 import random
 
-from ..config import Config, random_seed
-from ..util.data_loader import load_data
-from ..util.callbacks import SegCallback, SimpleTensorboardCallback, poly_lr
-from ..util.generator_thread import GeneratorThread
+from data_loader import load_data
+from callbacks import SegCallback, SimpleTensorboardCallback, poly_lr
+from generator_thread import GeneratorThread
 
-from .floornet import FloorNet
+from .segnet import SegNet
 
 import tensorflow as tf
 from tensorflow import keras as K
@@ -25,7 +24,6 @@ if "PYTHONHASHSEED" not in os.environ or os.environ["PYTHONHASHSEED"] != "0":
 np.random.seed(random_seed)
 tf.set_random_seed(random_seed)
 random.seed(random_seed)
-config = Config()
 
 try:
     os.mkdirs(config.weights_save_location)
@@ -43,18 +41,18 @@ train_data = GeneratorThread([train_data1, train_data2, train_data3, train_data4
 test_data = GeneratorThread([test_data], max_storage=200).get_iterator()
 valid_data = GeneratorThread([valid_data], max_storage=10).get_iterator()
 
-model = FloorNet(config, batchnorm=False, aux=True, pyramid=True, upsampling_trainable=True, upsampling_init=True)
+model = SegNet()
 
 #save_location = "/hdd/models/final_floorseg/f{}{}{}{}/".format(1 if aux else 0, 1 if pyramid else 0, 1 if upsampling_trainable else 0, 1 if upsampling_init else 0)
-save_location = "/hdd/models/isef/endeavor/"
+save_location = "/hdd/models/seg_small/test1/"
 
 print(save_location)
 
 checkpoint = K.callbacks.ModelCheckpoint(os.path.join(save_location, "model-{epoch:04d}.h5"), monitor="val_loss", verbose=0, save_best_only=False, mode="auto")
 
 writer = tf.summary.FileWriter("/tmp/logs")
-tensorboard = SimpleTensorboardCallback(config, writer)
-segCb = SegCallback(valid_data, config, writer)
+tensorboard = SimpleTensorboardCallback(writer)
+segCb = SegCallback(valid_data, writer)
 
 initial_lr = 2.0e-3 # Should be 6.0e-4
 epochs = 2000 # Should be 1000
@@ -72,14 +70,11 @@ def mean_iou(y_true, y_pred):
 
 model.compile(loss="binary_crossentropy", optimizer=SGD(lr=initial_lr, momentum=0.9, nesterov=True), metrics=["accuracy", mean_iou])
 
-with open(save_location+"config.json", "w") as f:
-    f.write(config.serialize())
-
 plot_model(model, to_file=save_location+"model.png", show_shapes=True)
 
 model.fit_generator(
     train_data,
-    config.samples_per_epoch,
+    200,
     epochs,
     validation_data=test_data,
     validation_steps=20,

@@ -7,8 +7,8 @@ import io
 import numpy as np
 import cv2
 
-from .vis import view_seg_map, img_stats
-from .data_loader import reverse_preprocess
+from vis import view_seg_map, img_stats
+from data_loader import reverse_preprocess
 
 def poly_lr(initial, max_epoch, exp=0.9):
     def fun(epoch, lr):
@@ -28,11 +28,10 @@ def make_tf_image(image):
     return tf.Summary.Image(height=height, width=width, colorspace=channel, encoded_image_string=image_string)
 
 class SegCallback(K.callbacks.Callback):
-    def __init__(self, data, config, writer):
+    def __init__(self, data, writer):
         self.validation_data = None
         self.model = None
         self.data = data
-        self.config = config
         self.writer = writer
 
     def on_train_begin(self, logs={}):
@@ -48,13 +47,12 @@ class SegCallback(K.callbacks.Callback):
         # Test network
         model = self.model
         generator = self.data
-        config = self.config
 
         images, labels = next(generator)
-        rgb, features, label = images[0][0], images[1][0], labels[0]
+        rgb, label = images[0], labels[0]
 
-        p = model.predict([np.array([rgb]), np.array([features])])[0]
-        p = p.reshape((config.image_size[0], config.image_size[1], 2)).argmax(axis=2)
+        p = model.predict(np.array([rgb]))[0]
+        p = p.reshape((128, 128, 2)).argmax(axis=2)
 
         image1 = (rgb[:, :, 0:3] / 2.0) + 0.5
         features = features
@@ -86,10 +84,9 @@ class SegCallback(K.callbacks.Callback):
         return
 
 class SimpleTensorboardCallback(K.callbacks.Callback):
-    def __init__(self, config, writer):
+    def __init__(self, writer):
         self.validation_data = None
         self.model = None
-        self.config = config
         self.epoch = 0
         self.hist = []
         self.writer = writer
@@ -120,7 +117,7 @@ class SimpleTensorboardCallback(K.callbacks.Callback):
         self.writer.add_summary(val_miou, epoch)
 
         for batch, summary in self.hist:
-            self.writer.add_summary(summary, self.epoch * self.config.samples_per_epoch + batch)
+            self.writer.add_summary(summary, self.epoch * 200 + batch)
 
         self.writer.flush()
         self.epoch = self.epoch + 1
