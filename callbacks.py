@@ -9,6 +9,8 @@ import cv2
 
 from vis import view_seg_map, img_stats
 
+from data_loader import INPUTSHAPE
+
 def poly_lr(initial, max_epoch, exp=0.9):
     def fun(epoch, lr):
         return initial * ((1.0 - float(epoch) / float(max_epoch)) ** exp)
@@ -51,7 +53,7 @@ class SegCallback(K.callbacks.Callback):
         rgb, label = images[0], labels[0]
 
         p = model.predict(np.array([rgb]))[0]
-        p = p.reshape((128, 128, 2)).argmax(axis=2)
+        p = p.reshape((INPUTSHAPE, INPUTSHAPE, 2)).argmax(axis=2)
 
         image1 = (rgb[:, :, 0:3] / 2.0) + 0.5
 

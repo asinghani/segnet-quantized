@@ -11,7 +11,7 @@ from vis import img_stats
 
 from augmentation import augment
 
-INPUTSHAPE = 128
+INPUTSHAPE = 192
 
 def load_data(config = [], aug_data = True):
     """

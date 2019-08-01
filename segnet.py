@@ -10,6 +10,8 @@ from tensorflow.keras.applications.mobilenet import MobileNet
 
 from layers import BilinearUpsampling
 
+from data_loader import INPUTSHAPE
+
 def Upsampling4(init_weights=True, trainable=False, input=None):
     # Conform to functional API
     if input is None:
@@ -33,7 +35,7 @@ def Upsampling4(init_weights=True, trainable=False, input=None):
 
     return x
 
-def SegNet(input_shape=(128, 128, 3)):
+def SegNet(input_shape=(INPUTSHAPE, INPUTSHAPE, 3)):
     input = Input(shape=input_shape)
 
     mobilenet = MobileNet(input_tensor=input, input_shape=input_shape, alpha=0.5, include_top=False, weights="imagenet", pooling=None)
@@ -42,7 +44,6 @@ def SegNet(input_shape=(128, 128, 3)):
 
     x = Conv2D(128, (1, 1), padding="same", use_bias=False, activation="relu")(x)
     x = Conv2D(64, (1, 1), padding="same", use_bias=False, activation="relu")(x)
-    x = Conv2D(128, (1, 1), padding="same", use_bias=False, activation="relu")(x)
 
     x = Conv2D(2, (1, 1), padding="same", use_bias=False)(x)
 
