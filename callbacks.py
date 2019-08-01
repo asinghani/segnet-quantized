@@ -8,7 +8,6 @@ import numpy as np
 import cv2
 
 from vis import view_seg_map, img_stats
-from data_loader import reverse_preprocess
 
 def poly_lr(initial, max_epoch, exp=0.9):
     def fun(epoch, lr):
@@ -55,7 +54,6 @@ class SegCallback(K.callbacks.Callback):
         p = p.reshape((128, 128, 2)).argmax(axis=2)
 
         image1 = (rgb[:, :, 0:3] / 2.0) + 0.5
-        features = features
 
         seg, overlay = view_seg_map(image1, p, color=(0, 1, 0), include_overlay=True)
         seg = seg * 255
@@ -64,7 +62,7 @@ class SegCallback(K.callbacks.Callback):
         gt = view_seg_map(image1, label.argmax(axis=2), color=(0, 1, 0)) * 255
         gt = make_tf_image(gt)
 
-        features = make_tf_image(((features / 2.0) + 0.5) * 255)
+        features = seg
 
         summary = tf.Summary(value=[tf.Summary.Value(tag="Segmentation", image=seg)])
         features_summary = tf.Summary(value=[tf.Summary.Value(tag="Features", image=features)])

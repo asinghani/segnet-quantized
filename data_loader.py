@@ -19,9 +19,9 @@ def load_data(config = [], aug_data = True):
     """
     X_train, X_test, Y_train, Y_test = load_files(config)
 
-    train_generator, mean, stddev = prepare_data(X_train, Y_train, config.batch_size, aug_data, config)
+    train_generator, mean, stddev = prepare_data(X_train, Y_train, 16, aug_data, config)
 
-    test_generator, _1, _2 = prepare_data(X_test, Y_test, config.test_batch_size, False, config)
+    test_generator, _1, _2 = prepare_data(X_test, Y_test, 16, False, config)
 
     valid_generator, _1, _2 = prepare_data(X_test[::2], Y_test[::2], 1, aug_data, config)
 
@@ -29,7 +29,7 @@ def load_data(config = [], aug_data = True):
 
 
 def load_files(config = []):
-    images = [f.split("/")[-1] for f in glob.glob(os.path.join("/hdd/datasets/person-seg/labels", "*.png"))]
+    images = [f.split("/")[-1] for f in glob.glob(os.path.join("/hdd/datasets/person-seg/labels", "*.png"))][:]
 
     X = [os.path.join("/hdd/datasets/person-seg/images", f) for f in images]
     Y = [os.path.join("/hdd/datasets/person-seg/labels", f) for f in images]
@@ -37,7 +37,7 @@ def load_files(config = []):
     X, Y = shuffle(X, Y)
 
     # Use 20% of the dataset for testing, 80% for training 
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=random_seed)
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
 
     return X_train, X_test, Y_train, Y_test
 
@@ -46,7 +46,7 @@ def rand_crop(img, label):
     h, w = img.shape[0:2]
 
     if w > h:
-        scale = random.randint(int(h * 0.6), h)
+        scale = random.randint(int(h * 0.75), h - 3)
         top = random.randint(0, h - scale - 1)
         bottom = top + scale
         left = random.randint(0, w - scale - 1)
@@ -54,7 +54,7 @@ def rand_crop(img, label):
 
         return cv2.resize(img[top:bottom, left:right], (INPUTSHAPE, INPUTSHAPE)), cv2.resize(label[top:bottom, left:right], (INPUTSHAPE, INPUTSHAPE))
     else:
-        scale = random.randint(int(w * 0.6), w)
+        scale = random.randint(int(w * 0.75), w - 3)
         top = random.randint(0, h - scale - 1)
         bottom = top + scale
         left = random.randint(0, w - scale - 1)
@@ -66,10 +66,10 @@ def rand_crop(img, label):
 def prepare_data(X, Y, batch_size, augment_data, config = []):
 
     X = [mpimg.imread(x) for x in X]
-    X = [preprocess_image(cv2.resize(x[:, :, 0:3], (INPUTSHAPE, INPUTSHAPE)), config = config) for x in X]
+    X = [(cv2.resize(x[:, :, 0:3], (INPUTSHAPE, INPUTSHAPE))) for x in X]
 
-    Y = [mpimg.imread(y) for y in Y]
-    Y = [preprocess_label(cv2.resize(y[:], (INPUTSHAPE, INPUTSHAPE)), config = config) for y in Y]
+    Y = [mpimg.imread(y)*255.0 for y in Y]
+    Y = [(cv2.resize(y[:], (INPUTSHAPE, INPUTSHAPE))) for y in Y]
 
     print("Read all data")
 
@@ -88,10 +88,12 @@ def prepare_data(X, Y, batch_size, augment_data, config = []):
                 label = Y[index]
                 image, label = postprocess(image, label, config)
 
-                if augment_data:
-                    image, label = augment(image, label)
+                #if augment_data:
+                #    image, label = augment(image, label)
 
                 image, label = rand_crop(image, label)
+
+                label = label.reshape((label.shape[0], label.shape[1], 1))
 
                 newLabel = np.zeros([label.shape[0], label.shape[1], 2], dtype=np.float32)
                 newLabel[np.where((label < 0.5).all(axis=2))] = (1, 0)
@@ -108,7 +110,7 @@ def prepare_data(X, Y, batch_size, augment_data, config = []):
 
             yield images, labels
 
-    return gen(), mean, stddev
+    return gen(), 0, 0
 
 def postprocess(image, label, config = []):
     label = cv2.cvtColor(label, cv2.COLOR_RGB2GRAY)[:, :, np.newaxis]

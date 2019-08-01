@@ -6,8 +6,9 @@ from tensorflow import keras as K
 from tensorflow.keras.layers import Conv2D, Conv2DTranspose, Dropout, Add, Input, ZeroPadding2D, AveragePooling2D, Activation, BatchNormalization, Concatenate, ReLU, DepthwiseConv2D
 from tensorflow.keras.models import Model
 
-from .layers import BilinearUpsampling, BilinearResize, SepConv
-from tensorflow.keras.applications.mobilenet_v2 import MobileNet
+from tensorflow.keras.applications.mobilenet import MobileNet
+
+from layers import BilinearUpsampling
 
 def Upsampling4(init_weights=True, trainable=False, input=None):
     # Conform to functional API
@@ -35,16 +36,17 @@ def Upsampling4(init_weights=True, trainable=False, input=None):
 def SegNet(input_shape=(128, 128, 3)):
     input = Input(shape=input_shape)
 
-    mobilenet = MobileNet(input_tensor=input, alpha=0.5, include_top=False, weights="imagenet", pooling=None)
+    mobilenet = MobileNet(input_tensor=input, input_shape=input_shape, alpha=0.5, include_top=False, weights="imagenet", pooling=None)
 
-    x = mobilenet.get_layer("conv_pw_3_relu").output
+    x = mobilenet.get_layer("conv_pw_5_relu").output
 
     x = Conv2D(128, (1, 1), padding="same", use_bias=False, activation="relu")(x)
+    x = Conv2D(64, (1, 1), padding="same", use_bias=False, activation="relu")(x)
     x = Conv2D(128, (1, 1), padding="same", use_bias=False, activation="relu")(x)
 
     x = Conv2D(2, (1, 1), padding="same", use_bias=False)(x)
 
-    x = Upsampling4(trainable=False, init_weights=True)(x)
+    x = BilinearUpsampling((8, 8))(x)
 
     x = Activation("softmax", name="decoder_softmax")(x)
 

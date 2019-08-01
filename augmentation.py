@@ -21,7 +21,7 @@ Augumentations:
         - Shear (small)
 """
 
-gen = ImageDataGenerator(fill_mode="reflect", dtype=np.float32)
+gen = ImageDataGenerator(fill_mode="reflect")
 
 def augment(image, label):
     rotationAngle = np.random.normal(0.0, 3.0)
